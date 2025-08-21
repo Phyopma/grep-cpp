@@ -1,11 +1,25 @@
 #include <iostream>
 #include <string>
 
+bool is_digit(const char c)
+{
+    return c >= '0' && c < '9';
+}
+
 bool match_pattern(const std::string &input_line, const std::string &pattern)
 {
     if (pattern.length() == 1)
     {
         return input_line.find(pattern) != std::string::npos;
+    }
+    else if (pattern == "\\d")
+    {
+        bool found = false;
+        for (const char c : input_line)
+        {
+            found |= is_digit(c);
+        }
+        return found;
     }
     else
     {
