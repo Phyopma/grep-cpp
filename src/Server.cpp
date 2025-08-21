@@ -1,10 +1,6 @@
 #include <iostream>
 #include <string>
-
-bool is_digit(const char c)
-{
-    return c >= '0' && c < '9';
-}
+#include <cctype>
 
 bool match_pattern(const std::string &input_line, const std::string &pattern)
 {
@@ -17,7 +13,16 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
         bool found = false;
         for (const char c : input_line)
         {
-            found |= is_digit(c);
+            found |= isdigit(c);
+        }
+        return found;
+    }
+    else if (pattern == "\\w")
+    {
+        bool found = false;
+        for (const char c : input_line)
+        {
+            found |= (isalnum(c) | c == '_');
         }
         return found;
     }
