@@ -32,14 +32,29 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
     }
     else if (!pattern.empty() && pattern.front() == '[' && pattern.back() == ']')
     {
-        std::string white_list = pattern.substr(1, pattern.size() - 2);
+        bool isNegative = pattern.at(1) == '^';
+        std::string white_list = isNegative ? pattern.substr(2, pattern.size() - 3) : pattern.substr(1, pattern.size() - 2);
 
         bool found = false;
-        for (const char c : white_list)
+        if (!isNegative)
         {
-            found |= input_line.find(c) != std::string::npos;
-            if (found)
-                break;
+            for (const char c : white_list)
+            {
+                found |= input_line.find(c) != std::string::npos;
+                if (found)
+                    break;
+            }
+        }
+        else
+        {
+            // std::cout << "Negative" << std::endl;
+            for (const char c : white_list)
+            {
+                // std::cout << c << ",  ";
+                found |= input_line.find(c) == std::string::npos;
+                if (found)
+                    break;
+            }
         }
         return found;
     }
