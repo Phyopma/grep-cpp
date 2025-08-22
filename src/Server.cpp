@@ -14,6 +14,8 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
         for (const char c : input_line)
         {
             found |= isdigit(c);
+            if (found)
+                break;
         }
         return found;
     }
@@ -22,7 +24,22 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
         bool found = false;
         for (const char c : input_line)
         {
-            found |= (isalnum(c) | c == '_');
+            found |= (isalnum(c) || (c == '_'));
+            if (found)
+                break;
+        }
+        return found;
+    }
+    else if (!pattern.empty() && pattern.front() == '[' && pattern.back() == ']')
+    {
+        std::string white_list = pattern.substr(1, pattern.size() - 2);
+
+        bool found = false;
+        for (const char c : white_list)
+        {
+            found |= input_line.find(c) != std::string::npos;
+            if (found)
+                break;
         }
         return found;
     }
