@@ -9,7 +9,7 @@
 
 bool match_pattern(const std::string &input_line, const std::string &pattern)
 {
-    RegParser rp(input_line, pattern);
+    RegParser rp(pattern);
 
     if (rp.parse())
     {
@@ -43,6 +43,11 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
                 std::cout << "START" << std::endl;
                 break;
             }
+            case END:
+            {
+                std::cout << "END" << std::endl;
+                break;
+            }
             default:
             {
                 std::cout << "ETK" << std::endl;
@@ -65,7 +70,15 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
                 ++c;
                 ++rIdx;
             }
-            return rIdx == pattern_length;
+            if (rIdx >= pattern_length)
+            {
+                return true;
+            }
+            else if (rIdx < pattern_length && rp.regex[rIdx].type == END)
+            {
+                return *c == '\0';
+            }
+            return false;
         }
         else
         {
@@ -83,8 +96,15 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
                 }
                 if (rIdx == pattern_length)
                     return true;
+
+                if (rIdx < pattern_length && rp.regex[rIdx].type == END && *c == '\0')
+                {
+                    return true;
+                }
+
                 c = start + 1;
             }
+
             return false;
         }
     }

@@ -8,6 +8,10 @@ bool RegParser::parse()
         {
             regex.push_back(makeRe(START));
         }
+        else if (match('$'))
+        {
+            regex.push_back(makeRe(END));
+        }
         else if (match('\\'))
         {
             // consume(); // consume '\'
@@ -98,6 +102,9 @@ bool RegParser::match_current(const char *c, std::vector<Re> &regex, int idx)
     }
     case START:
         return true;
+    // no need
+    case END:
+        return *c == '\0';
     default:
     {
         return false;

@@ -12,6 +12,7 @@ typedef enum
     DIGIT,
     ALPHANUM,
     START,
+    END,
     LIST,
     ETK,
 } RegType;
@@ -27,7 +28,9 @@ typedef struct
 class RegParser
 {
 public:
-    RegParser(const std::string &input_line, const std::string &pattern) : _input_line(input_line.c_str()), _pattern(pattern.c_str()) {};
+    RegParser(const std::string &pattern) : _pattern(pattern.c_str()) {};
+
+    // RegParser(const std::string &input_line, const std::string &pattern) : _input_line(input_line.c_str()), _pattern(pattern.c_str()) {};
 
     bool parse();
     Re makeRe(RegType type, char *ccl = nullptr, bool isNegative = false);
@@ -36,7 +39,7 @@ public:
     std::vector<Re> regex;
 
 private:
-    const char *_input_line;
+    // const char *_input_line;
     const char *_pattern;
 
     // std::string _pattern;
