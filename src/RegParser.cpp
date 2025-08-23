@@ -4,7 +4,11 @@ bool RegParser::parse()
 {
     do
     {
-        if (match('\\'))
+        if (match('^'))
+        {
+            regex.push_back(makeRe(START));
+        }
+        else if (match('\\'))
         {
             // consume(); // consume '\'
             if (match('w'))
@@ -92,6 +96,8 @@ bool RegParser::match_current(const char *c, std::vector<Re> &regex, int idx)
         }
         return current->isNegative ? !found : found;
     }
+    case START:
+        return true;
     default:
     {
         return false;
