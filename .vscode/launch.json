@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/build/exe",
             "args": [
                 "-E",
-                "^log"
+                "ca+at"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

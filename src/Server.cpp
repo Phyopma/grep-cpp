@@ -63,46 +63,18 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
 
         if (hasStartAnchor)
         {
-            int rIdx = 1;
-            const char *start = c;
-            while (rIdx < pattern_length && *c != '\0' && RegParser::match_current(c, rp.regex, rIdx))
-            {
-                ++c;
-                ++rIdx;
-            }
-            if (rIdx >= pattern_length)
-            {
-                return true;
-            }
-            else if (rIdx < pattern_length && rp.regex[rIdx].type == END)
-            {
-                return *c == '\0';
-            }
-            return false;
+
+            return RegParser::match_from_position(c, rp.regex, 1);
         }
         else
         {
-
             while (*c != '\0')
             {
-                const char *start = c;
-
-                int rIdx = 0;
-
-                while (rIdx < pattern_length && *c != '\0' && RegParser::match_current(c, rp.regex, rIdx))
-                {
-                    ++c;
-                    ++rIdx;
-                }
-                if (rIdx == pattern_length)
-                    return true;
-
-                if (rIdx < pattern_length && rp.regex[rIdx].type == END && *c == '\0')
+                if (RegParser::match_from_position(c, rp.regex, 0))
                 {
                     return true;
                 }
-
-                c = start + 1;
+                ++c;
             }
 
             return false;
