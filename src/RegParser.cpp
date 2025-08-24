@@ -90,7 +90,7 @@ bool RegParser::match_current(const char *c, const std::vector<Re> &regex, int i
     }
     case SINGLE_CHAR:
     {
-        return *c == *current->ccl;
+        return *c == *current->ccl || *current->ccl == '.';
     }
     case LIST:
     {
@@ -153,7 +153,7 @@ bool RegParser::match_one_or_more(const char *c, const std::vector<Re> &regex, i
     const char *t = c;
     char target_char = *regex[idx].ccl;
 
-    while (*t != '\0' && (*t == target_char))
+    while (*t != '\0' && (*t == target_char || target_char == '.'))
     {
         ++t;
     }
