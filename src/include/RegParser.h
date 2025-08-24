@@ -8,6 +8,14 @@
 
 typedef enum
 {
+    NONE,
+    PLUS,
+    STAR,
+    MARK
+} Quantifier;
+
+typedef enum
+{
     SINGLE_CHAR,
     DIGIT,
     ALPHANUM,
@@ -23,7 +31,7 @@ typedef struct
     // char *ch;
     char *ccl;
     bool isNegative;
-    bool hasPlus;
+    Quantifier quantifier;
 } Re;
 
 class RegParser
@@ -38,11 +46,12 @@ public:
     // RegParser(const std::string &input_line, const std::string &pattern) : _input_line(input_line.c_str()), _pattern(pattern.c_str()) {};
 
     bool parse();
-    Re makeRe(RegType type, char *ccl = nullptr, bool isNegative = false);
+    Re makeRe(RegType type, char *ccl = nullptr, bool isNegative = false, Quantifier quant = NONE);
 
     static bool match_current(const char *c, const std::vector<Re> &regex, int idx);
     static bool match_from_position(const char *start_pos, const std::vector<Re> &regex, int idx);
     static bool match_one_or_more(const char *c, const std::vector<Re> &regex, int idx);
+    static bool match_zero_or_one(const char *c, const std::vector<Re> &regex, int idx);
     std::vector<Re> regex;
 
 private:

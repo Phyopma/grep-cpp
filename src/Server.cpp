@@ -30,7 +30,28 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
             }
             case SINGLE_CHAR:
             {
-                std::cout << "SINGLE CHAR" << " >> " << tmp.ccl << std::endl;
+                std::cout << "SINGLE CHAR" << " >> " << tmp.ccl;
+                switch (tmp.quantifier)
+                {
+                case PLUS:
+                {
+                    std::cout << "+";
+                    break;
+                }
+                case MARK:
+                {
+                    std::cout << "?";
+                    break;
+                }
+                case STAR:
+                {
+                    std::cout << "*";
+                    break;
+                }
+                default:
+                    break;
+                }
+                std::cout << std::endl;
                 break;
             }
             case LIST:

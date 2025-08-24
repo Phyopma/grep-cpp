@@ -54,7 +54,9 @@ bool RegParser::parse()
 
             Re current = makeRe(SINGLE_CHAR, cstr);
             if (!isEof() && match('+'))
-                current.hasPlus = true;
+                current.quantifier = PLUS;
+            else if (!isEof() && match('?'))
+                current.quantifier = MARK;
             regex.push_back(current);
         }
 
@@ -63,13 +65,13 @@ bool RegParser::parse()
     return true;
 }
 
-Re RegParser::makeRe(RegType type, char *ccl, bool isNegative)
+Re RegParser::makeRe(RegType type, char *ccl, bool isNegative, Quantifier quant)
 {
     Re current;
     current.type = type;
     current.ccl = ccl;
     current.isNegative = isNegative;
-    current.hasPlus = false;
+    current.quantifier = quant;
     return current;
 }
 
@@ -125,21 +127,23 @@ bool RegParser::match_from_position(const char *start_pos, const std::vector<Re>
     while (rIdx < pattern_length && *c != '\0')
     {
         const Re &current = regex[rIdx];
-        if (current.hasPlus)
+        switch (current.quantifier)
         {
-
-            // if (!match_one_or_more(c, regex, rIdx))
-            //     return false;
-            // return match_from_position(c, regex, rIdx + 1);
+        case PLUS:
             return match_one_or_more(c, regex, rIdx);
+        case MARK:
+            return match_zero_or_one(c, regex, rIdx);
+        case NONE:
+        default:
+            if (RegParser::match_current(c, regex, rIdx))
+            {
+                ++c;
+                ++rIdx;
+            }
+            else
+                return false;
+            break;
         }
-        else if (RegParser::match_current(c, regex, rIdx))
-        {
-            ++c;
-            ++rIdx;
-        }
-        else
-            return false;
     }
     return (rIdx >= pattern_length) || (rIdx < pattern_length && regex[rIdx].type == END && *c == '\0');
 }
@@ -147,7 +151,6 @@ bool RegParser::match_from_position(const char *start_pos, const std::vector<Re>
 bool RegParser::match_one_or_more(const char *c, const std::vector<Re> &regex, int idx)
 {
     const char *t = c;
-
     char target_char = *regex[idx].ccl;
 
     while (*t != '\0' && (*t == target_char))
@@ -165,6 +168,16 @@ bool RegParser::match_one_or_more(const char *c, const std::vector<Re> &regex, i
         --t;
     } while (t > c);
     return false;
+}
+
+bool RegParser::match_zero_or_one(const char *c, const std::vector<Re> &regex, int idx)
+{
+    if (match_current(c, regex, idx))
+    {
+        if (match_from_position(c + 1, regex, idx + 1))
+            return true;
+    }
+    return match_from_position(c, regex, idx + 1);
 }
 
 bool RegParser::isEof()
