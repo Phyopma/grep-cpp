@@ -27,15 +27,6 @@ bool RegParser::match_current(const char *c, const std::vector<Re> &regex, int i
     const Re *current = &regex[idx];
     switch (current->type)
     {
-    // case ALT:
-    // {
-    //     for (const auto &alt : current->alternatives)
-    //     {
-    //         if (match_from_position(&c, alt, 0))
-    //             return true;
-    //     }
-    //     return false;
-    // }
     case DIGIT:
     {
         return isdigit(*c);
@@ -81,105 +72,105 @@ bool RegParser::match_from_position(const char **start_pos, const std::vector<Re
     int pattern_length = regex.size();
 
     while (rIdx < pattern_length)
-    // while (rIdx < pattern_length && *c != '\0')
     {
         const Re &current = regex[rIdx];
-        bool matched = false;
-        switch (current.quantifier)
+
+        if (!this->handle_quantified_match(&c, regex, rIdx))
         {
-        case PLUS:
-            if (current.type == ALT)
-            {
-                if (match_alt_one_or_more(&c, regex, rIdx))
-                {
-                    *start_pos = c;
-                    return true;
-                }
-                else
-                    return false;
-            }
-            else
-            {
-                if (match_one_or_more(&c, regex, rIdx))
-                {
-                    *start_pos = c;
-                    return true;
-                }
-                else
-                    return false;
-            }
-            break;
-        case MARK:
-            if (current.type == ALT)
-            {
-                if (match_alt_zero_or_one(&c, regex, rIdx))
-                {
-                    *start_pos = c;
-                    return true;
-                }
-                else
-                    return false;
-            }
-            else
-            {
-                if (match_zero_or_one(&c, regex, rIdx))
-                {
-                    *start_pos = c;
-                    return true;
-                }
-                else
-                    return false;
-            }
-            break;
-        case NONE:
-        default:
-            if (current.type == ALT)
-            {
-                for (const auto &alt : current.alternatives)
-                {
-                    const char *temp_c = c;
-                    if (match_from_position(&temp_c, alt, 0))
-                    {
-                        c = temp_c;
-                        matched = true;
-                        // ++rIdx;
-                        break;
-                    }
-                }
-                if (!matched)
-                {
-                    // *start_pos = c;
-                    c = *start_pos;
-                    return false;
-                }
-            }
-            else
-            {
-                if (RegParser::match_current(c, regex, rIdx))
-                {
-                    // ++c;
-                    // ++rIdx;
-                    if (!(regex[rIdx].type == START || regex[rIdx].type == END))
-                    {
-                        ++c;
-                    }
-                    matched = true;
-                }
-                else
-                {
-                    // *start_pos = c;
-                    // c = *start_pos;
-                    return false;
-                }
-            }
-            break;
+            return false;
         }
-        if (matched)
-            ++rIdx;
+        ++rIdx;
     }
 
     *start_pos = c;
     return (rIdx >= pattern_length) || (rIdx < pattern_length && regex[rIdx].type == END && *c == '\0');
+}
+
+bool RegParser::handle_quantified_match(const char **c, const std::vector<Re> &regex, int idx)
+{
+    const Re &current = regex[idx];
+
+    switch (current.quantifier)
+    {
+    case PLUS:
+        return this->handle_plus_quantifier(c, regex, idx);
+    case MARK:
+        return this->handle_question_quantifier(c, regex, idx);
+    case NONE:
+    default:
+        return this->handle_no_quantifier(c, regex, idx);
+    }
+}
+
+bool RegParser::handle_plus_quantifier(const char **c, const std::vector<Re> &regex, int idx)
+{
+    const Re &current = regex[idx];
+
+    if (current.type == ALT)
+    {
+        return this->match_alt_one_or_more(c, regex, idx);
+    }
+    else
+    {
+        return this->match_one_or_more(c, regex, idx);
+    }
+}
+
+bool RegParser::handle_question_quantifier(const char **c, const std::vector<Re> &regex, int idx)
+{
+    const Re &current = regex[idx];
+
+    if (current.type == ALT)
+    {
+        return this->match_alt_zero_or_one(c, regex, idx);
+    }
+    else
+    {
+        return this->match_zero_or_one(c, regex, idx);
+    }
+}
+
+bool RegParser::handle_no_quantifier(const char **c, const std::vector<Re> &regex, int idx)
+{
+    const Re &current = regex[idx];
+
+    if (current.type == ALT)
+    {
+        return this->handle_alternation(c, regex, idx);
+    }
+    else
+    {
+        return this->handle_single_match(c, regex, idx);
+    }
+}
+
+bool RegParser::handle_alternation(const char **c, const std::vector<Re> &regex, int idx)
+{
+    const Re &current = regex[idx];
+
+    for (const auto &alt : current.alternatives)
+    {
+        const char *temp_c = *c;
+        if (this->match_from_position(&temp_c, alt, 0))
+        {
+            *c = temp_c;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool RegParser::handle_single_match(const char **c, const std::vector<Re> &regex, int idx)
+{
+    if (this->match_current(*c, regex, idx))
+    {
+        if (!(regex[idx].type == START || regex[idx].type == END))
+        {
+            ++(*c);
+        }
+        return true;
+    }
+    return false;
 }
 
 bool RegParser::match_one_or_more(const char **c, const std::vector<Re> &regex, int idx)

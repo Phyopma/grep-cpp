@@ -113,13 +113,13 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
 
         if (hasStartAnchor)
         {
-            return RegParser::match_from_position(&c, rp.regex, 1);
+            return rp.match_from_position(&c, rp.regex, 1);
         }
         else
         {
             while (*c != '\0')
             {
-                if (RegParser::match_from_position(&c, rp.regex, 0))
+                if (rp.match_from_position(&c, rp.regex, 0))
                 {
                     return true;
                 }

@@ -52,11 +52,11 @@ public:
     Re makeRe(RegType type, char *ccl = nullptr, bool isNegative = false);
 
     static bool match_current(const char *c, const std::vector<Re> &regex, int idx);
-    static bool match_from_position(const char **start_pos, const std::vector<Re> &regex, int idx);
-    static bool match_one_or_more(const char **c, const std::vector<Re> &regex, int idx);
-    static bool match_alt_one_or_more(const char **c, const std::vector<Re> &regex, int idx);
-    static bool match_zero_or_one(const char **c, const std::vector<Re> &regex, int idx);
-    static bool match_alt_zero_or_one(const char **c, const std::vector<Re> &regex, int idx);
+    bool match_from_position(const char **start_pos, const std::vector<Re> &regex, int idx);
+    bool match_one_or_more(const char **c, const std::vector<Re> &regex, int idx);
+    bool match_alt_one_or_more(const char **c, const std::vector<Re> &regex, int idx);
+    bool match_zero_or_one(const char **c, const std::vector<Re> &regex, int idx);
+    bool match_alt_zero_or_one(const char **c, const std::vector<Re> &regex, int idx);
     std::vector<Re> regex;
 
 private:
@@ -80,6 +80,14 @@ private:
     inline bool at_begin() const { return _pattern == _begin; }
     inline bool at_end() const { return _pattern >= _end; }
     inline size_t offset() const { return static_cast<size_t>(_pattern - _begin); }
+
+    // New helper methods for refactored match_from_position
+    bool handle_quantified_match(const char **c, const std::vector<Re> &regex, int idx);
+    bool handle_plus_quantifier(const char **c, const std::vector<Re> &regex, int idx);
+    bool handle_question_quantifier(const char **c, const std::vector<Re> &regex, int idx);
+    bool handle_no_quantifier(const char **c, const std::vector<Re> &regex, int idx);
+    bool handle_alternation(const char **c, const std::vector<Re> &regex, int idx);
+    bool handle_single_match(const char **c, const std::vector<Re> &regex, int idx);
 };
 
 #endif
