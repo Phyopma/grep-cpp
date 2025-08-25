@@ -22,17 +22,20 @@ typedef enum
     START,
     END,
     LIST,
+    ALT,
     ETK,
 } RegType;
 
-typedef struct
+struct Re;
+struct Re
 {
     RegType type;
     // char *ch;
     char *ccl;
     bool isNegative;
     Quantifier quantifier;
-} Re;
+    std::vector<std::vector<Re>> alternatives;
+};
 
 class RegParser
 {
@@ -46,12 +49,14 @@ public:
     // RegParser(const std::string &input_line, const std::string &pattern) : _input_line(input_line.c_str()), _pattern(pattern.c_str()) {};
 
     bool parse();
-    Re makeRe(RegType type, char *ccl = nullptr, bool isNegative = false, Quantifier quant = NONE);
+    Re makeRe(RegType type, char *ccl = nullptr, bool isNegative = false);
 
     static bool match_current(const char *c, const std::vector<Re> &regex, int idx);
-    static bool match_from_position(const char *start_pos, const std::vector<Re> &regex, int idx);
-    static bool match_one_or_more(const char *c, const std::vector<Re> &regex, int idx);
-    static bool match_zero_or_one(const char *c, const std::vector<Re> &regex, int idx);
+    static bool match_from_position(const char **start_pos, const std::vector<Re> &regex, int idx);
+    static bool match_one_or_more(const char **c, const std::vector<Re> &regex, int idx);
+    static bool match_alt_one_or_more(const char **c, const std::vector<Re> &regex, int idx);
+    static bool match_zero_or_one(const char **c, const std::vector<Re> &regex, int idx);
+    static bool match_alt_zero_or_one(const char **c, const std::vector<Re> &regex, int idx);
     std::vector<Re> regex;
 
 private:
@@ -66,6 +71,11 @@ private:
     bool consume();
     bool check(char c);
     bool match(char c);
+
+    Re parseElement();
+    Re parseCharacterClass();
+    Re parseGroup();
+    void applyQuantifiers(Re &element);
 
     inline bool at_begin() const { return _pattern == _begin; }
     inline bool at_end() const { return _pattern >= _end; }

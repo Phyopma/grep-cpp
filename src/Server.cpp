@@ -7,6 +7,96 @@
 #define DEBUG
 // #define USE_TEST
 
+#ifdef DEBUG
+
+void printQuantifier(const Re &re)
+{
+    switch (re.quantifier)
+    {
+    case PLUS:
+    {
+        std::cout << "+";
+        break;
+    }
+    case MARK:
+    {
+        std::cout << "?";
+        break;
+    }
+    case STAR:
+    {
+        std::cout << "*";
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void printDebug(const std::vector<Re> &reList)
+{
+    for (const auto &tmp : reList)
+    {
+        switch (tmp.type)
+        {
+        case DIGIT:
+        {
+            std::cout << "DIGIT" << std::endl;
+            break;
+        }
+        case ALPHANUM:
+        {
+            std::cout << "ALPHANUM" << std::endl;
+            break;
+        }
+        case SINGLE_CHAR:
+        {
+            std::cout << "SINGLE CHAR" << " >> " << tmp.ccl;
+            printQuantifier(tmp);
+            std::cout << std::endl;
+            break;
+        }
+        case ALT:
+        {
+            std::cout << "ALT" << " >> " << std::endl;
+            std::cout << "(" << std::endl;
+            size_t l = tmp.alternatives.size();
+            for (size_t i = 0; i < l; ++i)
+            {
+                printDebug(tmp.alternatives[i]);
+                if (i < l - 1)
+                    std::cout << "|" << std::endl;
+            }
+            std::cout << ")";
+            printQuantifier(tmp);
+            std::cout << std::endl;
+            break;
+        }
+        case LIST:
+        {
+            std::cout << (tmp.isNegative ? "NEGATIVE " : "POSITIVE ") << "LIST" << " >> " << tmp.ccl << std::endl;
+            break;
+        }
+        case START:
+        {
+            std::cout << "START" << std::endl;
+            break;
+        }
+        case END:
+        {
+            std::cout << "END" << std::endl;
+            break;
+        }
+        default:
+        {
+            std::cout << "ETK" << std::endl;
+            break;
+        }
+        }
+    }
+}
+#endif
+
 bool match_pattern(const std::string &input_line, const std::string &pattern)
 {
     RegParser rp(pattern);
@@ -14,68 +104,7 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
     if (rp.parse())
     {
 #ifdef DEBUG
-        for (const auto &tmp : rp.regex)
-        {
-            switch (tmp.type)
-            {
-            case DIGIT:
-            {
-                std::cout << "DIGIT" << std::endl;
-                break;
-            }
-            case ALPHANUM:
-            {
-                std::cout << "ALPHANUM" << std::endl;
-                break;
-            }
-            case SINGLE_CHAR:
-            {
-                std::cout << "SINGLE CHAR" << " >> " << tmp.ccl;
-                switch (tmp.quantifier)
-                {
-                case PLUS:
-                {
-                    std::cout << "+";
-                    break;
-                }
-                case MARK:
-                {
-                    std::cout << "?";
-                    break;
-                }
-                case STAR:
-                {
-                    std::cout << "*";
-                    break;
-                }
-                default:
-                    break;
-                }
-                std::cout << std::endl;
-                break;
-            }
-            case LIST:
-            {
-                std::cout << (tmp.isNegative ? "NEGATIVE " : "POSITIVE ") << "LIST" << " >> " << tmp.ccl << std::endl;
-                break;
-            }
-            case START:
-            {
-                std::cout << "START" << std::endl;
-                break;
-            }
-            case END:
-            {
-                std::cout << "END" << std::endl;
-                break;
-            }
-            default:
-            {
-                std::cout << "ETK" << std::endl;
-                break;
-            }
-            }
-        }
+        printDebug(rp.regex);
 #endif
         int pattern_length = rp.regex.size();
         const char *c = input_line.c_str();
@@ -84,14 +113,13 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
 
         if (hasStartAnchor)
         {
-
-            return RegParser::match_from_position(c, rp.regex, 1);
+            return RegParser::match_from_position(&c, rp.regex, 1);
         }
         else
         {
             while (*c != '\0')
             {
-                if (RegParser::match_from_position(c, rp.regex, 0))
+                if (RegParser::match_from_position(&c, rp.regex, 0))
                 {
                     return true;
                 }
