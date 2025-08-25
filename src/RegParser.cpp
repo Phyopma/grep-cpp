@@ -80,7 +80,8 @@ bool RegParser::match_from_position(const char **start_pos, const std::vector<Re
     int rIdx = idx;
     int pattern_length = regex.size();
 
-    while (rIdx < pattern_length && *c != '\0')
+    while (rIdx < pattern_length)
+    // while (rIdx < pattern_length && *c != '\0')
     {
         const Re &current = regex[rIdx];
         bool matched = false;
@@ -88,14 +89,48 @@ bool RegParser::match_from_position(const char **start_pos, const std::vector<Re
         {
         case PLUS:
             if (current.type == ALT)
-                return match_alt_one_or_more(&c, regex, rIdx);
+            {
+                if (match_alt_one_or_more(&c, regex, rIdx))
+                {
+                    *start_pos = c;
+                    return true;
+                }
+                else
+                    return false;
+            }
             else
-                return match_one_or_more(&c, regex, rIdx);
+            {
+                if (match_one_or_more(&c, regex, rIdx))
+                {
+                    *start_pos = c;
+                    return true;
+                }
+                else
+                    return false;
+            }
+            break;
         case MARK:
             if (current.type == ALT)
-                return match_alt_zero_or_one(&c, regex, rIdx);
+            {
+                if (match_alt_zero_or_one(&c, regex, rIdx))
+                {
+                    *start_pos = c;
+                    return true;
+                }
+                else
+                    return false;
+            }
             else
-                return match_zero_or_one(&c, regex, rIdx);
+            {
+                if (match_zero_or_one(&c, regex, rIdx))
+                {
+                    *start_pos = c;
+                    return true;
+                }
+                else
+                    return false;
+            }
+            break;
         case NONE:
         default:
             if (current.type == ALT)
@@ -113,7 +148,8 @@ bool RegParser::match_from_position(const char **start_pos, const std::vector<Re
                 }
                 if (!matched)
                 {
-                    *start_pos = c;
+                    // *start_pos = c;
+                    c = *start_pos;
                     return false;
                 }
             }
@@ -121,13 +157,18 @@ bool RegParser::match_from_position(const char **start_pos, const std::vector<Re
             {
                 if (RegParser::match_current(c, regex, rIdx))
                 {
-                    ++c;
+                    // ++c;
                     // ++rIdx;
+                    if (!(regex[rIdx].type == START || regex[rIdx].type == END))
+                    {
+                        ++c;
+                    }
                     matched = true;
                 }
                 else
                 {
-                    *start_pos = c;
+                    // *start_pos = c;
+                    // c = *start_pos;
                     return false;
                 }
             }
@@ -188,6 +229,11 @@ bool RegParser::match_alt_one_or_more(const char **c, const std::vector<Re> &reg
             const char *temp_pos = pos;
             if (match_from_position(&temp_pos, alt, 0))
             {
+                if (temp_pos == pos)
+                {
+                    continue;
+                }
+                // return false;
                 match_ends.push_back(temp_pos); // store end pos
                 pos = temp_pos;
                 found_match = true;
@@ -342,6 +388,7 @@ Re RegParser::parseCharacterClass()
     std::copy(buffer.begin(), buffer.end(), cstr);
     cstr[buffer.size()] = '\0';
     current.ccl = cstr;
+    applyQuantifiers(current);
     return current;
 }
 
