@@ -2,6 +2,7 @@
 #define REG_PARSER
 
 #include <vector>
+#include <unordered_map>
 #include <string>
 #include <cctype>
 #include <iostream>
@@ -23,6 +24,7 @@ typedef enum
     END,
     LIST,
     ALT,
+    BACKREF,
     ETK,
 } RegType;
 
@@ -34,8 +36,17 @@ struct Re
     char *ccl;
     bool isNegative;
     Quantifier quantifier;
+    int captured_gp_id;
     std::vector<std::vector<Re>> alternatives;
 };
+
+typedef struct
+{
+    const char *start;
+    size_t length;
+} CaptureGroup;
+
+static int next_capture_id = 1; // will change back to member later
 
 class RegParser
 {
@@ -51,7 +62,7 @@ public:
     bool parse();
     Re makeRe(RegType type, char *ccl = nullptr, bool isNegative = false);
 
-    static bool match_current(const char *c, const std::vector<Re> &regex, int idx);
+    bool match_current(const char *c, const std::vector<Re> &regex, int idx);
     bool match_from_position(const char **start_pos, const std::vector<Re> &regex, int idx);
     bool match_one_or_more(const char **c, const std::vector<Re> &regex, int idx);
     bool match_alt_one_or_more(const char **c, const std::vector<Re> &regex, int idx);
@@ -64,6 +75,8 @@ private:
     const char *_pattern{nullptr};
     const char *_begin{nullptr};
     const char *_end{nullptr};
+
+    std::unordered_map<int, CaptureGroup> captures;
 
     // std::string _pattern;
 
@@ -82,12 +95,14 @@ private:
     inline size_t offset() const { return static_cast<size_t>(_pattern - _begin); }
 
     // New helper methods for refactored match_from_position
-    bool handle_quantified_match(const char **c, const std::vector<Re> &regex, int idx);
+    int handle_quantified_match(const char **c, const std::vector<Re> &regex, int idx);
     bool handle_plus_quantifier(const char **c, const std::vector<Re> &regex, int idx);
     bool handle_question_quantifier(const char **c, const std::vector<Re> &regex, int idx);
     bool handle_no_quantifier(const char **c, const std::vector<Re> &regex, int idx);
     bool handle_alternation(const char **c, const std::vector<Re> &regex, int idx);
     bool handle_single_match(const char **c, const std::vector<Re> &regex, int idx);
+
+    bool matchCharacterInList(char c, const Re &ListRe) const;
 };
 
 #endif

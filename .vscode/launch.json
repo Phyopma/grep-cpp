@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/build/exe",
             "args": [
                 "-E",
-                "ca+t"
+                "drea+mer"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

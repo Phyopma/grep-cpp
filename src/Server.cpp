@@ -41,12 +41,16 @@ void printDebug(const std::vector<Re> &reList)
         {
         case DIGIT:
         {
-            std::cout << "DIGIT" << std::endl;
+            std::cout << "DIGIT" << " >> ";
+            printQuantifier(tmp);
+            std::cout << std::endl;
             break;
         }
         case ALPHANUM:
         {
-            std::cout << "ALPHANUM" << std::endl;
+            std::cout << "ALPHANUM" << " >> ";
+            printQuantifier(tmp);
+            std::cout << std::endl;
             break;
         }
         case SINGLE_CHAR:
@@ -54,6 +58,12 @@ void printDebug(const std::vector<Re> &reList)
             std::cout << "SINGLE CHAR" << " >> " << tmp.ccl;
             printQuantifier(tmp);
             std::cout << std::endl;
+            break;
+        }
+        case BACKREF:
+        {
+            std::cout << "BACKREF" << " >> ";
+            std::cout << tmp.captured_gp_id << std::endl;
             break;
         }
         case ALT:
