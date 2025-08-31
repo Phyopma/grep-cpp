@@ -11,7 +11,8 @@
             "program": "${workspaceFolder}/build/exe",
             "args": [
                 "-E",
-                "(\\d (cat|dog|cow)s?(, | and )?)+$"
+                ".+berry",
+                "fruits-1194.txt"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

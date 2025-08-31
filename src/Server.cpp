@@ -154,15 +154,16 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
 bool any_match(std::istream &in, const std::string &pattern)
 {
     std::string line;
+    bool isMatched = false;
     while (std::getline(in, line))
     {
         if (match_pattern(line, pattern))
         {
+            isMatched = true;
             std::cout << line << std::endl;
-            return true;
         }
     }
-    return false;
+    return isMatched;
 }
 
 int main(int argc, char *argv[])
