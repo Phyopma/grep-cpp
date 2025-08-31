@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/build/exe",
             "args": [
                 "-E",
-                "drea+mer"
+                "(\\d (cat|dog|cow)s?(, | and )?)+$"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

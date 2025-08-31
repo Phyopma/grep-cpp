@@ -4,7 +4,7 @@
 #include <cctype>
 #include "include/RegParser.h"
 
-#define DEBUG
+// #define DEBUG
 // #define USE_TEST
 
 #ifdef DEBUG
@@ -73,7 +73,7 @@ void printDebug(const std::vector<Re> &reList)
             size_t l = tmp.alternatives.size();
             for (size_t i = 0; i < l; ++i)
             {
-                printDebug(tmp.alternatives[i]);
+                printDebug(tmp.alternatives[i].regex);
                 if (i < l - 1)
                     std::cout << "|" << std::endl;
             }
@@ -84,7 +84,9 @@ void printDebug(const std::vector<Re> &reList)
         }
         case LIST:
         {
-            std::cout << (tmp.isNegative ? "NEGATIVE " : "POSITIVE ") << "LIST" << " >> " << tmp.ccl << std::endl;
+            std::cout << (tmp.isNegative ? "NEGATIVE " : "POSITIVE ") << "LIST" << " >> " << tmp.ccl;
+            printQuantifier(tmp);
+            std::cout << std::endl;
             break;
         }
         case START:
@@ -113,23 +115,27 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
 
     if (rp.parse())
     {
+        // rp.parser_gp_stack.push(&rp.token_list);
+        const auto &regex = rp.token_list.regex;
 #ifdef DEBUG
-        printDebug(rp.regex);
+        printDebug(regex);
 #endif
-        int pattern_length = rp.regex.size();
+        int pattern_length = regex.size();
         const char *c = input_line.c_str();
 
-        bool hasStartAnchor = !rp.regex.empty() && rp.regex[0].type == START;
+        bool hasStartAnchor = !regex.empty() && regex[0].type == START;
 
         if (hasStartAnchor)
         {
-            return rp.match_from_position(&c, rp.regex, 1);
+            rp.sync_index(&rp.token_list, 1);
+            return rp.match_from_position(&c, rp.token_list, 1);
         }
         else
         {
             while (*c != '\0')
             {
-                if (rp.match_from_position(&c, rp.regex, 0))
+                rp.sync_index(&rp.token_list, 0);
+                if (rp.match_from_position(&c, rp.token_list, 0))
                 {
                     return true;
                 }
