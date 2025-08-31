@@ -151,7 +151,7 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
     }
 }
 
-bool any_match(std::istream &in, const std::string &pattern)
+bool any_match(std::istream &in, const std::string &pattern, const std::string &filename = "")
 {
     std::string line;
     bool isMatched = false;
@@ -160,6 +160,8 @@ bool any_match(std::istream &in, const std::string &pattern)
         if (match_pattern(line, pattern))
         {
             isMatched = true;
+            if (!filename.empty())
+                std::cout << filename << ":";
             std::cout << line << std::endl;
         }
     }
@@ -173,7 +175,7 @@ int main(int argc, char *argv[])
     std::cerr << std::unitbuf;
 
     // You can use print statements as follows for debugging, they'll be visible when running tests.
-    std::cerr << "Logs from your program will appear here" << std::endl;
+    // std::cerr << "Logs from your program will appear here" << std::endl;
 
     if (argc < 3)
     {
@@ -185,9 +187,6 @@ int main(int argc, char *argv[])
     std::string pattern = argv[2];
     std::string filename;
 
-    if (argc == 4)
-        filename = argv[3];
-
     if (flag != "-E")
     {
         std::cerr << "Expected first argument to be '-E'" << std::endl;
@@ -196,30 +195,29 @@ int main(int argc, char *argv[])
 
     try
     {
-#ifdef USE_TEST
-        std::ifstream test_file("test_input.txt");
-        if (!test_file.is_open())
+        if (argc >= 4)
         {
-            std::cerr << "Failed to open file: test_input.txt" << std::endl;
-            return 1;
-        }
-        return any_match(test_file, pattern) ? 0 : 1;
-#else
-        if (!filename.empty())
-        {
-            std::ifstream file(filename);
-            if (!file.is_open())
+            bool is_found = false;
+            for (int i = 3; i < argc; ++i)
             {
-                std::cerr << "Failed to open file: " << filename << std::endl;
-                return 1;
+                filename = argv[i];
+                if (!filename.empty())
+                {
+                    std::ifstream file(filename);
+                    if (!file.is_open())
+                    {
+                        std::cerr << "Failed to open file: " << filename << std::endl;
+                        return 1;
+                    }
+                    is_found |= any_match(file, pattern, argc > 4 ? filename : "");
+                }
             }
-            return any_match(file, pattern) ? 0 : 1;
+            return !is_found;
         }
         else
         {
             return any_match(std::cin, pattern) ? 0 : 1;
         }
-#endif
     }
     catch (const std::runtime_error &e)
     {

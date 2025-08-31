@@ -11,8 +11,9 @@
             "program": "${workspaceFolder}/build/exe",
             "args": [
                 "-E",
-                ".+berry",
-                "fruits-1194.txt"
+                "pi.+$",
+                "fruits-9859.txt",
+                "vegetables-6870.txt"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
