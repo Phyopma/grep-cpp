@@ -1,24 +1,168 @@
 #include "include/RegParser.h"
 
+#ifdef DEBUG
+
+void printQuantifier(const Re &re)
+{
+    switch (re.quantifier)
+    {
+    case PLUS:
+    {
+        std::cout << "+";
+        break;
+    }
+    case MARK:
+    {
+        std::cout << "?";
+        break;
+    }
+    case STAR:
+    {
+        std::cout << "*";
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+void printDebug(const std::vector<Re> &reList)
+{
+    for (const auto &tmp : reList)
+    {
+        switch (tmp.type)
+        {
+        case DIGIT:
+        {
+            std::cout << "DIGIT" << " >> ";
+            printQuantifier(tmp);
+            std::cout << std::endl;
+            break;
+        }
+        case ALPHANUM:
+        {
+            std::cout << "ALPHANUM" << " >> ";
+            printQuantifier(tmp);
+            std::cout << std::endl;
+            break;
+        }
+        case SINGLE_CHAR:
+        {
+            std::cout << "SINGLE CHAR" << " >> " << tmp.ccl;
+            printQuantifier(tmp);
+            std::cout << std::endl;
+            break;
+        }
+        case BACKREF:
+        {
+            std::cout << "BACKREF" << " >> ";
+            std::cout << tmp.captured_gp_id << std::endl;
+            break;
+        }
+        case ALT:
+        {
+            std::cout << "ALT" << " >> " << std::endl;
+            std::cout << "(" << std::endl;
+            size_t l = tmp.alternatives.size();
+            for (size_t i = 0; i < l; ++i)
+            {
+                printDebug(tmp.alternatives[i].regex);
+                if (i < l - 1)
+                    std::cout << "|" << std::endl;
+            }
+            std::cout << ")";
+            printQuantifier(tmp);
+            std::cout << std::endl;
+            break;
+        }
+        case LIST:
+        {
+            std::cout << (tmp.isNegative ? "NEGATIVE " : "POSITIVE ") << "LIST" << " >> " << tmp.ccl;
+            printQuantifier(tmp);
+            std::cout << std::endl;
+            break;
+        }
+        case START:
+        {
+            std::cout << "START" << std::endl;
+            break;
+        }
+        case END:
+        {
+            std::cout << "END" << std::endl;
+            break;
+        }
+        default:
+        {
+            std::cout << "ETK" << std::endl;
+            break;
+        }
+        }
+    }
+}
+#endif
+
 bool RegParser::parse()
 {
+    if (!_pattern)
+        return false;
+
     parser_gp_stack.push(&token_list);
-    while (!isEof())
+    try
     {
-        Re element = parseElement();
-        if (element.type == ETK)
-            return false;
-        token_list.regex.push_back(element);
+        while (!isEof())
+        {
+            Re element = parseElement();
+            if (element.type == ETK)
+            {
+                parser_gp_stack.pop();
+                return false;
+            }
+            token_list.regex.push_back(std::move(element));
+        }
     }
+    catch (...)
+    {
+        parser_gp_stack.pop();
+        return false;
+    }
+
     parser_gp_stack.pop();
     return true;
 }
 
-Re RegParser::makeRe(RegType type, char *ccl, bool isNegative)
+bool RegParser::match(const std::string &input_line)
 {
-    return {type, ccl, isNegative, NONE, -1, {}};
-}
+    if (!parse())
+        return false;
 
+    const auto &regex = token_list.regex;
+#ifdef DEBUG
+    printDebug(regex);
+#endif
+    if (regex.empty())
+        return false;
+
+    const char *c = input_line.c_str();
+    bool has_start_anchor = regex[0].type == START;
+
+    if (has_start_anchor)
+    {
+        sync_index(&token_list, 1);
+        return match_from_position(&c, token_list, 1);
+    }
+    else
+    {
+        while (*c != '\0')
+        {
+            sync_index(&token_list, 0);
+            if (match_from_position(&c, token_list, 0))
+                return true;
+            ++c;
+        }
+        return false;
+    }
+}
 bool RegParser::match_current(const char *c, const std::vector<Re> &regex, int idx)
 {
     const Re &current = regex[idx];
@@ -30,7 +174,7 @@ bool RegParser::match_current(const char *c, const std::vector<Re> &regex, int i
     case ALPHANUM:
         return isalnum(*c) || *c == '_';
     case SINGLE_CHAR:
-        return *c == *current.ccl || *current.ccl == '.';
+        return *c == current.ccl[0] || current.ccl[0] == '.';
     case LIST:
         return matchCharacterInList(*c, current);
     case START:
@@ -44,12 +188,10 @@ bool RegParser::match_current(const char *c, const std::vector<Re> &regex, int i
 
 bool RegParser::matchCharacterInList(char c, const Re &listRe) const
 {
-    const char *p = listRe.ccl;
-    while (*p != '\0')
+    for (char ch : listRe.ccl)
     {
-        if (c == *p)
+        if (c == ch)
             return !listRe.isNegative;
-        ++p;
     }
     return listRe.isNegative;
 }
@@ -61,45 +203,31 @@ bool RegParser::match_from_position(const char **start_pos, const TokenList &tok
     int rIdx = idx;
     int pattern_length = regex.size();
 
-    // TODO:
-
-    // if (!is_backtracking)
     sync_index(const_cast<TokenList *>(&token_list), rIdx);
     if (idx >= pattern_length)
-    {
         return true;
-    }
 
     while (rIdx < pattern_length && *c != '\0')
     {
-        const Re &current = token_list.regex[rIdx];
-
-        // if (is_backtrack && current.type == BACKREF)
-        // {
-        //     return true;
-        // }
-
-        // std::cout << "before >> " << rIdx << std::endl;
         int consumed = handle_quantified_match(&c, token_list, rIdx);
         if (consumed <= 0)
             return false;
-        // std::cout << "after >> consumed " << consumed << " tokens." << std::endl;
 
         rIdx += consumed;
-        // if (!is_backtracking)
         sync_index(const_cast<TokenList *>(&token_list), rIdx);
     }
 
     *start_pos = c;
+
     if (rIdx >= pattern_length)
         return true;
+
     if (*c == '\0')
     {
         return regex[rIdx].type == END || regex[rIdx].quantifier == MARK;
     }
-    // return (rIdx >= pattern_length) || (rIdx < pattern_length && regex[rIdx].type == END && *c == '\0');
+
     return false;
-    // return true;
 }
 
 bool RegParser::can_match_next_here(const char *start_pos, const TokenList &token_list, int idx, bool is_backtracking)
@@ -442,12 +570,6 @@ bool RegParser::match_alt_zero_or_one(const char **c, const TokenList &token_lis
         }
     }
     return true;
-    // return can_match_next_here(*c, token_list, idx + 1);
-}
-
-bool RegParser::isEof()
-{
-    return *_pattern == '\0';
 }
 
 bool RegParser::consume()
@@ -460,11 +582,6 @@ bool RegParser::consume()
     return false;
 }
 
-bool RegParser::check(char c)
-{
-    return *_pattern == c;
-}
-
 bool RegParser::match(char c)
 {
     if (check(c))
@@ -475,16 +592,13 @@ bool RegParser::match(char c)
 Re RegParser::parseElement()
 {
     if (match('^'))
-    {
         return makeRe(START);
-    }
     else if (match('$'))
         return makeRe(END);
     else if (match('\\'))
     {
         if (match('w'))
         {
-
             Re current = makeRe(ALPHANUM);
             applyQuantifiers(current);
             return current;
@@ -495,7 +609,7 @@ Re RegParser::parseElement()
             applyQuantifiers(current);
             return current;
         }
-        else if (isdigit(*_pattern))
+        else if (!isEof() && std::isdigit(*_pattern))
         {
             int gp_num = *_pattern - '0';
             consume();
@@ -512,25 +626,20 @@ Re RegParser::parseElement()
         }
     }
     else if (match('['))
-    {
         return parseCharacterClass();
-    }
     else if (match('('))
-    {
         return parseGroup();
-    }
-    else
+    else if (!isEof())
     {
-        // parse single char
-        char *cstr = new char[2];
-        cstr[0] = *_pattern;
-        cstr[1] = '\0';
+        std::string cstr(1, *_pattern);
         consume();
 
         Re current = makeRe(SINGLE_CHAR, cstr);
         applyQuantifiers(current);
         return current;
     }
+    else
+        return makeRe(ETK);
 }
 
 Re RegParser::parseCharacterClass()
@@ -551,18 +660,18 @@ Re RegParser::parseCharacterClass()
         return makeRe(ETK);
     }
 
-    char *cstr = new char[buffer.size() + 1];
-    std::copy(buffer.begin(), buffer.end(), cstr);
-    cstr[buffer.size()] = '\0';
-    current.ccl = cstr;
+    current.ccl = buffer;
     applyQuantifiers(current);
     return current;
 }
 
 Re RegParser::parseGroup()
 {
+    if (parser_gp_stack.empty())
+        return makeRe(ETK);
+
     TokenList *parent = parser_gp_stack.top();
-    TokenList current_token_list = {parent, std::vector<Re>()};
+    TokenList current_token_list(parent);
     parser_gp_stack.push(&current_token_list);
 
     Re altGp = makeRe(ALT);
@@ -573,13 +682,13 @@ Re RegParser::parseGroup()
     {
         if (match('|'))
         {
-            altGp.alternatives.push_back(current_token_list);
-            current_token_list.regex.clear();
+            altGp.alternatives.push_back(std::move(current_token_list));
+            current_token_list = TokenList(parent);
         }
         else if (match(')'))
         {
             parser_gp_stack.pop();
-            altGp.alternatives.push_back(current_token_list);
+            altGp.alternatives.push_back(std::move(current_token_list));
             isClosed = true;
             break;
         }
@@ -587,8 +696,11 @@ Re RegParser::parseGroup()
         {
             Re element = parseElement();
             if (element.type == ETK)
+            {
+                parser_gp_stack.pop();
                 return makeRe(ETK);
-            current_token_list.regex.push_back(element);
+            }
+            current_token_list.regex.push_back(std::move(element));
         }
     } while (!isEof());
 
@@ -608,4 +720,9 @@ void RegParser::applyQuantifiers(Re &element)
         element.quantifier = PLUS;
     else if (!isEof() && match('?'))
         element.quantifier = MARK;
+}
+
+Re RegParser::makeRe(RegType type, const std::string &ccl, bool isNegative)
+{
+    return Re(type, ccl, isNegative);
 }

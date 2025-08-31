@@ -7,8 +7,8 @@
 #include <cstring>
 #include <cctype>
 #include <iostream>
-#include <unordered_map>
 #include <stack>
+#include <memory>
 
 // #define DEBUG
 
@@ -33,80 +33,69 @@ typedef enum
     ETK,
 } RegType;
 
-struct Re;
 struct TokenList;
+
 struct Re
 {
-    RegType type;
-    // char *ch;
-    char *ccl;
-    bool isNegative;
-    Quantifier quantifier;
-    int captured_gp_id;
+    RegType type = ETK;
+    std::string ccl;
+    bool isNegative = false;
+    Quantifier quantifier = NONE;
+    int captured_gp_id = -1;
     std::vector<TokenList> alternatives;
 };
 
 struct TokenList
 {
-    TokenList *parent;
+    TokenList *parent = nullptr;
     std::vector<Re> regex;
 };
 
-typedef struct
+struct CaptureGroup
 {
-    const char *start;
-    size_t length;
-} CaptureGroup;
-
-static int next_capture_id = 1; // will change back to member later
+    const char *start = nullptr;
+    size_t length = 0;
+};
 
 class RegParser
 {
 public:
-    RegParser(const std::string &pattern) : _pattern(pattern.c_str())
+    explicit RegParser(const std::string &pattern) : _pattern(pattern.c_str()), _begin(pattern.c_str()), _end(_begin + pattern.size())
     {
-        _begin = _pattern;
-        _end = _begin + pattern.size();
         gp_stack[&token_list] = 0;
     };
 
-    void sync_index(TokenList *tl, int idx)
-    {
-        // better check here
-        gp_stack[tl] = idx;
-    }
+    // disable copy and assignment (pointer conflict)
+    RegParser(const RegParser &) = delete;
+    RegParser &operator=(const RegParser &) = delete;
 
-    // RegParser(const std::string &input_line, const std::string &pattern) : _input_line(input_line.c_str()), _pattern(pattern.c_str()) {};
+    // Move constructor and assignment
+    RegParser(RegParser &&) = default;
+    RegParser &operator=(RegParser &&) = default;
 
     bool parse();
-    Re makeRe(RegType type, char *ccl = nullptr, bool isNegative = false);
+    bool match(const std::string &input_line);
 
-    bool match_current(const char *c, const std::vector<Re> &regex, int idx);
-    bool match_from_position(const char **start_pos, const TokenList &token_list, int idx, bool is_backtracking = false);
-    bool can_match_next_here(const char *start_pos, const TokenList &token_list, int idx, bool is_backtracking = false);
-    bool match_one_or_more(const char **c, const TokenList &token_list, int idx);
-    bool match_alt_one_or_more(const char **c, const TokenList &token_list, int idx);
-    bool match_zero_or_one(const char **c, const TokenList &token_list, int idx);
-    bool match_alt_zero_or_one(const char **c, const TokenList &token_list, int idx);
-    // std::vector<Re> regex;
-    TokenList token_list{nullptr, std::vector<Re>()};
+    TokenList token_list;
     std::unordered_map<TokenList *, int> gp_stack;
-    std::stack<TokenList *> parser_gp_stack;
 
 private:
-    // const char *_input_line;
     const char *_pattern{nullptr};
     const char *_begin{nullptr};
     const char *_end{nullptr};
+    int next_capture_id = 1;
 
+    // parsing state
+    std::stack<TokenList *> parser_gp_stack;
+
+    // runtime state for matching
     std::unordered_map<int, CaptureGroup> captures;
     std::unordered_map<int, const char *> group_start;
 
-    // std::string _pattern;
-
-    bool isEof();
+    // Parsing methods
+    bool isEof() const { return _pattern >= _end; }
     bool consume();
-    bool check(char c);
+    bool check(char c) const { return !isEof() && *_pattern == c; }
     bool match(char c);
 
     Re parseElement();
@@ -114,11 +103,22 @@ private:
     Re parseGroup();
     void applyQuantifiers(Re &element);
 
-    inline bool at_begin() const { return _pattern == _begin; }
-    inline bool at_end() const { return _pattern >= _end; }
-    inline size_t offset() const { return static_cast<size_t>(_pattern - _begin); }
+    Re makeRe(RegType type, const std::string &ccl = "", bool isNegative = false);
 
-    // New helper methods for refactored match_from_position
+    // matching methods
+    void sync_index(TokenList *tl, int idx) { gp_stack[tl] = idx; }
+
+    bool match_current(const char *c, const std::vector<Re> &regex, int idx);
+    bool match_from_position(const char **start_pos, const TokenList &token_list, int idx, bool is_backtracking = false);
+    bool can_match_next_here(const char *start_pos, const TokenList &token_list, int idx, bool is_backtracking = false);
+    bool matchCharacterInList(char c, const Re &ListRe) const;
+
+    bool match_one_or_more(const char **c, const TokenList &token_list, int idx);
+    bool match_alt_one_or_more(const char **c, const TokenList &token_list, int idx);
+    bool match_zero_or_one(const char **c, const TokenList &token_list, int idx);
+    bool match_alt_zero_or_one(const char **c, const TokenList &token_list, int idx);
+
+    // quantifier handlers
     int handle_quantified_match(const char **c, const TokenList &token_list, int idx);
     bool handle_plus_quantifier(const char **c, const TokenList &token_list, int idx);
     bool handle_question_quantifier(const char **c, const TokenList &token_list, int idx);
@@ -126,7 +126,10 @@ private:
     bool handle_alternation(const char **c, const TokenList &token_list, int idx);
     bool handle_single_match(const char **c, const TokenList &token_list, int idx);
 
-    bool matchCharacterInList(char c, const Re &ListRe) const;
+    // utility
+    inline bool at_begin() const { return _pattern == _begin; }
+    inline bool at_end() const { return _pattern >= _end; }
+    inline size_t offset() const { return static_cast<size_t>(_pattern - _begin); }
 };
 
 #endif
