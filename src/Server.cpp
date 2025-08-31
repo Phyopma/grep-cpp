@@ -151,6 +151,20 @@ bool match_pattern(const std::string &input_line, const std::string &pattern)
     }
 }
 
+bool any_match(std::istream &in, const std::string &pattern)
+{
+    std::string line;
+    while (std::getline(in, line))
+    {
+        if (match_pattern(line, pattern))
+        {
+            std::cout << line << std::endl;
+            return true;
+        }
+    }
+    return false;
+}
+
 int main(int argc, char *argv[])
 {
     // Flush after every std::cout / std::cerr
@@ -160,7 +174,7 @@ int main(int argc, char *argv[])
     // You can use print statements as follows for debugging, they'll be visible when running tests.
     std::cerr << "Logs from your program will appear here" << std::endl;
 
-    if (argc != 3)
+    if (argc < 3)
     {
         std::cerr << "Expected two arguments" << std::endl;
         return 1;
@@ -168,6 +182,10 @@ int main(int argc, char *argv[])
 
     std::string flag = argv[1];
     std::string pattern = argv[2];
+    std::string filename;
+
+    if (argc == 4)
+        filename = argv[3];
 
     if (flag != "-E")
     {
@@ -175,30 +193,32 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Uncomment this block to pass the first stage
-    //
-    std::string input_line;
-#ifdef USE_TEST
-    std::ifstream file("test_input.txt");
-    if (file.is_open())
-    {
-        std::getline(file, input_line);
-        std::cerr << "Read from file: '" << input_line << "'" << std::endl;
-    }
-#else
-    std::getline(std::cin, input_line);
-#endif
-
     try
     {
-        if (match_pattern(input_line, pattern))
+#ifdef USE_TEST
+        std::ifstream test_file("test_input.txt");
+        if (!test_file.is_open())
         {
-            return 0;
+            std::cerr << "Failed to open file: test_input.txt" << std::endl;
+            return 1;
+        }
+        return any_match(test_file, pattern) ? 0 : 1;
+#else
+        if (!filename.empty())
+        {
+            std::ifstream file(filename);
+            if (!file.is_open())
+            {
+                std::cerr << "Failed to open file: " << filename << std::endl;
+                return 1;
+            }
+            return any_match(file, pattern) ? 0 : 1;
         }
         else
         {
-            return 1;
+            return any_match(std::cin, pattern) ? 0 : 1;
         }
+#endif
     }
     catch (const std::runtime_error &e)
     {
